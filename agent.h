@@ -12,6 +12,7 @@ class agent {
         float goalx;
         float goaly;
         int idx;
+        poi p;
         
 
         void setter(int index,float startx, float starty);
@@ -29,6 +30,8 @@ void agent::setter(int index,float startx, float starty){
     _y=starty;
     reset();
 }
+
+
 
 void agent::set_goal(float xx, float yy){
     goalx=xx;
@@ -58,8 +61,7 @@ void agent::move(){
 }
 
 void agent::observe(poi p){
-
-if (abs(p.x-x)<1 && abs(p.y-y)<1)
-    p.observe(idx);
+    if (abs(p.x-x)<1 && abs(p.y-y)<1)
+        p.observe(idx);
 
 }

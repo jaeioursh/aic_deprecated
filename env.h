@@ -1,18 +1,21 @@
+#pragma once
+
 #include <vector>
 #include <random>
+#include <algorithm>
 
 #include "poi.h"
 #include "agent.h"
 
 struct room{
     vector<poi> pois;
-    int pois;
     float x1,x2,y1,y2;
     float doorx,doory;
 };
 
 struct params{
     unsigned long seed;
+    int room_decay;
     int n_agents;
     float room_size;
     int n_rooms;
@@ -36,6 +39,7 @@ class env {
 
         env(params param);
         void create_rooms();
+        void reset();
         void create_agents();
         vector<vector<float>> state();
         void action(vector<int> actions);
@@ -49,6 +53,18 @@ env::env(params param) : unif(0,1){
     create_agents();
     create_rooms();
 }
+
+void env::reset(){
+    for(int i=0; i<p.n_rooms;i++){
+        for(int j=0;j<rooms[i].pois.size();j++){
+            rooms[i].pois[j].reset();
+        }
+    }
+    for(int i=0;i<p.n_agents;i++)
+        agents[i].reset();
+
+}
+
 
 void env::create_rooms(){
     room temp_room;
@@ -67,7 +83,7 @@ void env::create_rooms(){
                 temp_room.y2*=-1;
             }
             temp_room.doorx=(temp_room.x1+temp_room.x2)/2;
-            temp_room.doory=temp_room.y1;
+            temp_room.doory=temp_room.y1*0.99;
 
             for(int k=0; k<p.pois_per_room;k++){
                 x=temp_room.x1+unif(eng)*p.room_size;
@@ -78,7 +94,7 @@ void env::create_rooms(){
                 temp_room.pois.push_back(temp_poi);
             }
             rooms.push_back(temp_room);
-            temp_room.pois.clear()
+            temp_room.pois.clear();
         }
         
     }
@@ -93,7 +109,15 @@ void env::create_agents(){
 }
 
 vector<vector<float>> env::state(){
-//TODO
+    vector<vector<float>> s;
+
+    
+    s.resize(p.n_agents);
+    for(int i=0; i<p.n_agents;i++){
+        s[i].resize(p.n_rooms*(p.poi_types+1));
+        fill(s[i].begin(), s[i].end(), 0);
+    }
+    return s;
 }
 
 void env::action(vector<int> actions){
@@ -108,7 +132,7 @@ void env::action(vector<int> actions){
 
         room_idx=actions[i]/p.n_rooms;
         poi_type=actions[i]%p.n_rooms;
-        //determin room location
+        //determine room location
         if (y<p.hallway_width/2 && y>-p.hallway_width/2)
             curr_room=-1;
         else{
@@ -117,11 +141,24 @@ void env::action(vector<int> actions){
                 curr_room+=p.n_rooms/2;
         }
         //movement
-        if (curr_room==-1)
+        if (curr_room==-1){ //hallway -> room
+            agents[i].set_goal(rooms[room_idx].doorx,rooms[room_idx].doory);
+        }
+                   
+        else if (curr_room!=room_idx){ //room -> hallway
+            agents[i].set_goal(rooms[curr_room].doorx,rooms[curr_room].doory);
+        }
 
-        else if (curr_room!=room_idx)
-
-        else
+        else{ //in room
+            for(int j=0;j<rooms[room_idx].pois.size();j++){
+                if (rooms[room_idx].pois[j].type==poi_type && rooms[room_idx].pois[j].active){
+                    agents[i].set_goal(rooms[room_idx].pois[j].x,rooms[room_idx].pois[j].y);
+                    agents[i].observe(rooms[room_idx].pois[j]);
+                    break;
+                }
+            }
+        }
+        agents[i].move();
 
 
 
@@ -130,10 +167,42 @@ void env::action(vector<int> actions){
 
 
 
-vector<float> G(){
-
+vector<float> env::G(){
+    vector<float> g;
+    g.resize(p.n_values);
+    fill(g.begin(), g.end(), 0);
+    for(int i=0; i<p.n_rooms;i++){
+        for(int j=0;j<rooms[i].pois.size();j++){
+            if (rooms[i].pois[j].observed){
+                for(int k=0;k<p.n_values;k++)
+                    g[k]+=rooms[i].pois[j].vals[k];
+            }
+        }
+    }
+    return g;
 }
 
 vector<vector<float>> env::D(){
+
+    vector<vector<float>> d;
+
+    
+    d.resize(p.n_agents);
+    for(int i=0; i<p.n_agents;i++){
+        d[i].resize(p.n_values);
+        fill(d[i].begin(), d[i].end(), 0);
+    }
+
+
+    for(int i=0; i<p.n_rooms;i++){
+        for(int j=0;j<rooms[i].pois.size();j++){
+            if (rooms[i].pois[j].observed){
+                for(int k=0;k<p.n_agents;k++)
+                    for(int m=0;m<p.n_values;m++)
+                        d[k][m]+=rooms[i].pois[j].vals[m]*rooms[i].pois[j].d_vec[k];
+            }
+        }
+    }
+    return d;
 
 }

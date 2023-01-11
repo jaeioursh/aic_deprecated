@@ -1,3 +1,4 @@
+#pragma once
 
 #include <vector>
 #include <algorithm>
@@ -8,10 +9,11 @@ class poi {
     public:
         vector<float> vals;
         vector<float> zero_vec;
-        vector<bool> d_vec;
+        vector<float> d_vec;
         int n_agents;
         int val_dim;
         int observing;
+        bool observed;
         bool active;
         float x;
         float y;
@@ -21,15 +23,14 @@ class poi {
         void refresh();
         void reset();
         void observe(int idx);
-        vector<float> G();
-        vector<bool> D();
-        void setter(float X, float Y, vector<float> values,int couple_req, int agents,int poi_type)
+        void setter(float X, float Y, vector<float> values,int couple_req, int agents,int poi_type);
         poi(){};
 };
 
 void poi::reset(){
     active=1;
     observing=0;
+    observed=0;
     fill(d_vec.begin(), d_vec.end(), 0);
 }
 
@@ -40,23 +41,18 @@ void poi::observe(int idx){
 }
 
 void poi::refresh(){
-
-    if (observing>=couple)
-        active=0;
-    fill(d_vec.begin(), d_vec.end(), 0);
-    observing=0;
-}
-
-vector<float> poi::G(){
     if (active){
-        return zero_vec;
+        if (observing>=couple)
+            active=0;
+            observed=1;
+        if (observing != couple)
+            fill(d_vec.begin(), d_vec.end(), 0);
+        observing=0;
     }
-    return vals;
 }
 
-vector<bool> poi::D(){
-    return d_vec;
-}
+
+
 
 void poi::setter(float X, float Y, vector<float> values,int couple_req,int agents,int poi_type){
     n_agents=agents;

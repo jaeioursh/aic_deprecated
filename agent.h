@@ -1,3 +1,4 @@
+#pragma once
 
 #include "poi.h"
 #include <math.h>
@@ -19,7 +20,7 @@ class agent {
         void set_goal(float xx, float yy);
         void reset();
         void move();
-        void observe(poi p);
+        void observe(poi &p);
 
 
 };
@@ -60,7 +61,7 @@ void agent::move(){
     }
 }
 
-void agent::observe(poi p){
+void agent::observe(poi &p){
     if (abs(p.x-x)<1 && abs(p.y-y)<1)
         p.observe(idx);
 

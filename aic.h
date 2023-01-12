@@ -3,6 +3,7 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <iostream>
 
 #include "poi.h"
 #include "agent.h"
@@ -17,10 +18,12 @@ struct params{
     unsigned long seed;
     int room_decay;
     int n_agents;
-    float room_size;
+    float room_width;
+    float room_height;
     int n_rooms;
     int pois_per_room;
     int poi_types;
+    int agent_types;
     float hallway_width;
     int n_values;
     int coupling;
@@ -48,10 +51,11 @@ class aic {
 };
 
 aic::aic(params param) : unif(0,1){
-    eng.seed(p.seed);
     p=param;
+    eng.seed(p.seed);
     create_agents();
     create_rooms();
+    reset();
 }
 
 void aic::reset(){
@@ -74,20 +78,22 @@ void aic::create_rooms(){
     float x,y;
     for(int i=0;i<p.n_rooms/2;i++){
         for(int j=0;j<2;j++){
-            temp_room.x1=float(i)*p.room_size;
-            temp_room.x2=float(i+1)*p.room_size;
+            //set up room dimensions
+            temp_room.x1=float(i)*p.room_width;
+            temp_room.x2=float(i+1)*p.room_width;
             temp_room.y1=p.hallway_width/2;
-            temp_room.y2=p.hallway_width/2+p.room_size;
+            temp_room.y2=p.hallway_width/2+p.room_height;
             if (j==1){
                 temp_room.y1*=-1;
                 temp_room.y2*=-1;
             }
             temp_room.doorx=(temp_room.x1+temp_room.x2)/2;
-            temp_room.doory=temp_room.y1*0.99;
+            temp_room.doory=temp_room.y1;
 
+            //add pois
             for(int k=0; k<p.pois_per_room;k++){
-                x=temp_room.x1+unif(eng)*p.room_size;
-                y=temp_room.x1+unif(eng)*p.room_size;
+                x=temp_room.x1+unif(eng)*(temp_room.x2-temp_room.x1);
+                y=temp_room.y1+unif(eng)*(temp_room.y2-temp_room.y1);
                 for(int q=0;q<p.n_values;q++)
                     vals[q]=unif(eng);
                 temp_poi.setter(x,y,vals,p.coupling,p.n_agents,k%p.poi_types);
@@ -130,15 +136,15 @@ void aic::action(vector<int> actions){
         x=agents[i].x;
         y=agents[i].y;
 
-        room_idx=actions[i]/p.n_rooms;
-        poi_type=actions[i]%p.n_rooms;
+        room_idx=actions[i]/p.poi_types;
+        poi_type=actions[i]%p.poi_types;
         //determine room location
         if (y<p.hallway_width/2 && y>-p.hallway_width/2)
             curr_room=-1;
         else{
-            curr_room=int(x/p.room_size);
-            if(x<0)
-                curr_room+=p.n_rooms/2;
+            curr_room=int(x/p.room_width)*2;
+            if(y<0)
+                curr_room+=1;
         }
         //movement
         if (curr_room==-1){ //hallway -> room
@@ -154,15 +160,20 @@ void aic::action(vector<int> actions){
                 if (rooms[room_idx].pois[j].type==poi_type && rooms[room_idx].pois[j].active){
                     agents[i].set_goal(rooms[room_idx].pois[j].x,rooms[room_idx].pois[j].y);
                     agents[i].observe(rooms[room_idx].pois[j]);
+                    if(i==0) std::cout<<rooms[room_idx].pois[j].active<<std::endl;
                     break;
                 }
             }
         }
+        
         agents[i].move();
-
-
-
     }
+    for(int i=0; i<p.n_rooms;i++)
+        for(int j=0;j<rooms[i].pois.size();j++)
+            rooms[i].pois[j].refresh();
+
+        
+    
 }
 
 

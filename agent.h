@@ -26,6 +26,7 @@ class agent {
 };
 
 void agent::setter(int index,float startx, float starty){
+    type=0;
     idx=index;
     _x=startx;
     _y=starty;
@@ -51,14 +52,14 @@ void agent::move(){
     dx=goalx-x;
     dy=goaly-y;
     r=sqrt(dx*dx+dy*dy);
-    if(r>1){
+    //if(r>1){
         x+=dx/r;
         y+=dy/r;
-    }
-    else{
-        x+=dx;
-        y+=dy;
-    }
+    //}
+    //else{
+    //    x+=dx;
+    //    y+=dy;
+    //}
 }
 
 void agent::observe(poi &p){

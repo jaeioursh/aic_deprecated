@@ -34,6 +34,11 @@ class aic {
     public:
         vector<room> rooms;
         vector<agent> agents;
+        vector<vector<float>> s;
+
+        vector<vector<int>> room_timers;
+        vector<float> global_state;
+
         int seed;
         default_random_engine eng;
         uniform_real_distribution<float> unif;
@@ -41,6 +46,7 @@ class aic {
 
 
         aic(params param);
+        void gen_global_state();
         void create_rooms();
         void reset();
         void create_agents();
@@ -51,14 +57,31 @@ class aic {
 };
 
 aic::aic(params param) : unif(0,1){
+    vector<int> temp;
+    
     p=param;
     eng.seed(p.seed);
     create_agents();
     create_rooms();
+    global_state.resize(p.n_rooms*(p.poi_types+p.agent_types));
+    room_timers.resize(p.n_agents);
+    temp.resize(p.n_rooms);
+    for(int i=0;i<p.n_agents;i++)
+        room_timers[i]=temp;
+    s.resize(p.n_agents);
+    for(int i=0; i<p.n_agents;i++)
+        s[i].resize(p.n_rooms*(p.poi_types+p.agent_types));
+        
     reset();
 }
 
 void aic::reset(){
+    for(int i=0; i<p.n_agents;i++){
+        fill(room_timers[i].begin(), room_timers[i].end(), 0);
+        fill(s[i].begin(),s[i].end(),0);
+    }
+    
+    fill(global_state.begin(), global_state.end(), 0);
     for(int i=0; i<p.n_rooms;i++){
         for(int j=0;j<rooms[i].pois.size();j++){
             rooms[i].pois[j].reset();
@@ -114,15 +137,47 @@ void aic::create_agents(){
     }
 }
 
-vector<vector<float>> aic::state(){
-    vector<vector<float>> s;
+void aic::gen_global_state(){
+    int idx;
+    fill(global_state.begin(), global_state.end(), 0);
+    int i;
+    for(i=0;i<p.n_rooms;i++){
+        for(int j=0;j<rooms[i].pois.size();j++){
+            idx=i*(p.agent_types+p.poi_types)+rooms[i].pois[j].type;
+            global_state[idx]+=1;
+        }
+    }
+    for(int j=0;j<p.n_agents;j++){
+        i=agents[j].room;
+        idx=i*(p.agent_types+p.poi_types)+p.poi_types+agents[j].type;
+        global_state[idx]+=1;
+    }
+}
 
+vector<vector<float>> aic::state(){
     
+    int rm_idx;
+    gen_global_state();
     s.resize(p.n_agents);
     for(int i=0; i<p.n_agents;i++){
-        s[i].resize(p.n_rooms*(p.poi_types+1));
-        fill(s[i].begin(), s[i].end(), 0);
+        if (agents[i].room>=0)
+            room_timers[i][agents[i].room]=p.room_decay;
+
+        s[i].resize(p.n_rooms*(p.poi_types+p.agent_types));
+        for(int j=0;j<(p.n_rooms*(p.poi_types+p.agent_types));j++){
+            rm_idx=j/(p.poi_types+p.agent_types);
+            if (rm_idx==agents[i].room)
+                s[i][j]=global_state[j];
+            if(room_timers[i][rm_idx]==0)
+                s[i][j]=0;
+
+        }
+
+        for(int j=0;j<p.n_rooms;j++)
+            if (room_timers[i][j]>0)
+               room_timers[i][j]--; 
     }
+    
     return s;
 }
 
@@ -144,7 +199,7 @@ void aic::action(vector<int> actions){
         else{
             curr_room=int(x/p.room_width)*2;
             if(y<0)
-                curr_room+=1;
+                curr_room++;
         }
         //movement
         if (curr_room==-1){ //hallway -> room
@@ -160,19 +215,19 @@ void aic::action(vector<int> actions){
                 if (rooms[room_idx].pois[j].type==poi_type && rooms[room_idx].pois[j].active){
                     agents[i].set_goal(rooms[room_idx].pois[j].x,rooms[room_idx].pois[j].y);
                     agents[i].observe(rooms[room_idx].pois[j]);
-                    if(i==0) std::cout<<rooms[room_idx].pois[j].active<<std::endl;
                     break;
                 }
             }
         }
         
         agents[i].move();
+        agents[i].room=curr_room;
+        
+
     }
     for(int i=0; i<p.n_rooms;i++)
         for(int j=0;j<rooms[i].pois.size();j++)
             rooms[i].pois[j].refresh();
-
-        
     
 }
 

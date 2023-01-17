@@ -13,6 +13,7 @@ class agent {
         float goalx;
         float goaly;
         int idx;
+        int room;
         poi p;
         
 
@@ -43,6 +44,7 @@ void agent::set_goal(float xx, float yy){
 void agent::reset(){
     goalx=0;
     goaly=0;
+    room=-1;
     x=_x;
     y=_y;
 }
@@ -52,14 +54,10 @@ void agent::move(){
     dx=goalx-x;
     dy=goaly-y;
     r=sqrt(dx*dx+dy*dy);
-    //if(r>1){
-        x+=dx/r;
-        y+=dy/r;
-    //}
-    //else{
-    //    x+=dx;
-    //    y+=dy;
-    //}
+
+    x+=dx/r;
+    y+=dy/r;
+
 }
 
 void agent::observe(poi &p){

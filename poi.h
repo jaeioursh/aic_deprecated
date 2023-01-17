@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 
+
 using namespace std;
 
 class poi {
@@ -42,9 +43,10 @@ void poi::observe(int idx){
 
 void poi::refresh(){
     if (active){
-        if (observing>=couple)
+        if (observing>=couple){
             active=0;
             observed=1;
+        }
         if (observing != couple)
             fill(d_vec.begin(), d_vec.end(), 0);
         observing=0;
@@ -58,6 +60,7 @@ void poi::setter(float X, float Y, vector<float> values,int couple_req,int agent
     n_agents=agents;
     d_vec.resize(n_agents);
     type=poi_type;
+    vals=values;
     x=X;
     y=Y;
     val_dim=values.size();

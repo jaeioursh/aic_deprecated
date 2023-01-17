@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-def view(env):
+def view(env,delay=0.2):
     plt.ion()
     plt.clf()
 
@@ -35,26 +35,44 @@ def view(env):
     colors = [color[int(p)] for p in agent[2]]
     plt.scatter(agent[0], agent[1], c=colors, marker="o")
     ax.axis('equal')
-    plt.pause(.2)
+    if delay>0:
+        plt.pause(delay)
 
+
+def super_view(env,delay=0.2):
+    plt.subplot(1,2,1)
+    view(env,0.2)
+    plt.subplot(1,2,2)
+    s=np.array([i for i in env.state()])
+    print(env.global_state)
+    plt.imshow(s)
+    plt.pause(delay)
 
 
 
 p=params()
 p.seed=0
 p.room_decay=10
-p.n_agents=5
+p.n_agents=2
 p.room_height=10
 p.room_width=4
 p.n_rooms=6
 p.pois_per_room=2
 p.poi_types=2
 p.hallway_width=2
-p.n_values=3
-p.coupling=1
+p.n_values=1
+p.coupling=2
+p.agent_types=1
 env=aic(p) 
+
 for j in range(p.n_rooms):
     for i in range(20):
-        view(env)
+
+        
+       
         #print(np.array([i for i in env.state()]))
-        env.action([j*2+1]*p.n_agents)
+        env.action([j*2]*p.n_agents)
+        
+        print(env.G())
+        print(env.D())
+        super_view(env,.5)
